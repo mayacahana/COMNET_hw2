@@ -24,6 +24,7 @@ int send_command(int sckt, Message* msg_to_send) {
 	network_msg.header.type = htons(msg_to_send->header.type);
 	network_msg.header.arg1len = htons(msg_to_send->header.arg1len);
 	strcpy(network_msg.arg1, msg_to_send->arg1);
+	// printf("in send command: %s\n", network_msg.arg1);
 	int total = 0;
 	int bytesLeft = len;
 	int n;
@@ -68,13 +69,13 @@ int receive_command(int sckt, Message* msg_received) {
 	}
 	msg_received->header.arg1len = ntohs(msg_received->header.arg1len);
 	msg_received->header.type = ntohs(msg_received->header.type);
-	if ((msg_received->header.arg1len)
-			> MAX_DATA_SIZE) {
+	if ((msg_received->header.arg1len) > MAX_DATA_SIZE) {
 		printf("Recieve command failed- msg too big");
 		return 1;
 	}
 	//receive arg1
 	int len_arg1 = msg_received->header.arg1len;
+	memset(msg_received->arg1,0, MAX_DATA_SIZE);
 	if (receiveAll(sckt, msg_received->arg1, &len_arg1)) {
 		printf("%s\n", strerror(errno));
 		printf("Bytes recieved: %d \n", len_header);

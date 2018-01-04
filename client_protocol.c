@@ -145,6 +145,24 @@ int listOfFilesCommand(Message* m, char* commandStr, int mySocketfd) {
 	return status;
 }
 
+int listOfOnlineUsersCommand(Message*m , char* commandStr, int mySocketfd) {
+	createMessageCommand(m, LIST_OF_ONLINE_USERS, "online");
+	int status = send_command(mySocketfd, m);
+	if (status != 0) {
+		printf("error, re-send message\n");
+		free(m);
+		return 0;
+	}
+	status = receive_command(mySocketfd, m);
+	if (status) {
+		printf("Error in receiving message %s\n", strerror(errno));
+	}
+	printMessageArg(m);
+	free(m);
+	return status;
+}
+
+
 int deleteFileCommand(Message* m, char* file_name, int mySocket) {
 	createMessageCommand(m, DELETE_FILE, file_name);
 	int status = send_command(mySocket, m);
@@ -158,6 +176,24 @@ int deleteFileCommand(Message* m, char* file_name, int mySocket) {
 		printf("error in receiving message\n");
 	}
 	printMessageArg(m);
+	free(m);
+	return 0;
+}
+
+int readMessagesClient(Message* m, int mySocket) {
+	createMessageCommand(m, READ_MSGS, "read_msgs");
+	int status = send_command(mySocket, m);
+	if (status != 0) {
+		printf("error, re-send message\n");
+		free(m);
+		return 1;
+	}
+	status = receive_command(mySocket, m);
+	if (status) {
+		printf("error in receiving message\n");
+	}
+	printMessageArg(m);
+	printf("\n");
 	free(m);
 	return 0;
 }
@@ -220,6 +256,8 @@ int getFileCommand(Message* m, char* file_name, char* path_to_save,
 	free(m);
 	return 0;
 }
+
+
 int sendClientCommand(char* commandStr, int mySocketfd) {
 	Message* m = (Message*) malloc(sizeof(Message));
 	char* c = malloc(strlen(commandStr) + 5);
@@ -274,13 +312,31 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 		}
 		free(c);
 		return 0;
+	}
+	if (strcmp(str1, "users_online") == 0) {
+		if (listOfOnlineUsersCommand(m, commandStr, mySocketfd) == 1) {
+			printf("Error in get online users list command %s \n", strerror(errno));
+			free(c);
+			return 1;
+		}
+		free(c);
+		return 0;
+	}
+	if (strcmp(str1, "read_msgs") == 0) {
+		if (readMessagesClient(m, mySocketfd) == 1) {
+			printf("Error in get online users list command %s \n", strerror(errno));
+			free(c);
+			return 1;
+		}
+		free(c);
+		return 0;
 	} else if (strcmp(str1, "quit") == 0) {
 		createQuitCommand(m, mySocketfd);
 		free(m);
 		free(c);
 		return 1; //quiting
 	} else {
-		printf("Invalid command \n");
+		printf("Invalid commanddd \n");
 	}
 	free(c);
 	free(m);

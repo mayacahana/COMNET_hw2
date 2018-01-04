@@ -19,13 +19,13 @@ int createQuitCommand(Message* m, int mySocketfd);
 int sendClientCommand(char* commandStr, int mySocketfd);
 int addFileClientSide(char* buffer, char* filePath);
 int getFileClientSide(char* filePath, char* fileBuffer);
-int  client_start(char* hostname, int port);
+int client_start(char* hostname, int port);
 int listOfFilesCommand(Message* m, char* commandStr,  int mySocketfd);
 int deleteFileCommand(Message* m, char* commandStr, int mySocket);
 int addFileCommand(Message* m, char* path_to_file,char* file_name, int mySocket);
 int getFileCommand(Message* m, char* file_name, char* path_to_save, int mySocket);
-
-
+int listOfOnlineUsersCommand(Message*m , char* commandStr, int mySocketfd);
+int readMessagesClient(Message* m, int mySocket);
 
 
 #endif /* CLIENT_PROTOCOL_H_ */
