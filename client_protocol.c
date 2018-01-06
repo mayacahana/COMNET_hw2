@@ -8,6 +8,8 @@
 
 #include "client_protocol.h"
 
+
+
 /*
  * @param pointer to string and size_t variable n
  * removes last n bits from the string.
@@ -22,6 +24,22 @@ void chopN(char* str, size_t n) {
 	memmove(str, str + n, len - n + 1);
 }
 
+int delete_connection(connection_t * con){
+	if (close(con->socket) < 0 ){
+		perror("ERROR:");
+		return -1;
+	}
+	return 0;
+}
+int create_connection(int socket, char* username) {
+	connection_t* newConnection = (connection_t*) malloc(sizeof(connection_t));
+	if (!newConnection) {
+		return -1;
+	}
+	newConnection->socket = socket;
+	newConnection->username = username;
+	return 0;
+}
 /*
  * sends server username and password
  * returns 0 if succeeds, otherwise returns 1

@@ -9,6 +9,8 @@
 
 // global Users Array
 User** usersArray;
+int listen_socket;
+connection_t connection_users[MAX_CLIENTS];
 
 Message* createServerMessage(MessageType type, char* arg1) {
 	Message* msg = (Message*) malloc(sizeof(Message));
@@ -26,6 +28,18 @@ void freeUsers(int numOfUsers) {
 		free(usersArray[i]);
 	}
 	free(usersArray);
+}
+
+User* getUser(char* username) {
+	if (username == NULL)
+		return NULL;
+	int i = 0;
+	User** selectedUser = usersArray;
+	while (selectedUser[i] != NULL){
+		if (strcmp(selectedUser[i]->user_name, username) == 0)
+			return selectedUser[i];
+	}
+	return NULL;
 }
 
 void addFile(int clientSocket, Message* msg, User* user) {
@@ -242,8 +256,7 @@ char* getNameAndFiles(User* user) {
 		return NULL;
 	}
 	char* arg = (char*) malloc(sizeof(char) * (MAX_USERNAME_SIZE + 50));
-	sprintf(arg, "Hi %s, you have %d files stored.\n", user->user_name,
-			(numOfFiles - 2));
+	sprintf(arg, "Hi %s, you have %d files stored.\n", user->user_name,(numOfFiles - 2));
 	return arg;
 }
 
@@ -314,83 +327,248 @@ void sendGreetingMessage(int clientSocket) {
 	free(greeting);
 }
 
-void start_listen_server(int *listen_socket, int port) {
+// void start_listen_server(int *listen_sock, int port) {
+// 	int status;
+// 	// create a fd for the listen socket
+// 	*listen_sock = socket(PF_INET, SOCK_STREAM, 0);
+// 	if (*listen_socket < 0) {
+// 		printf("%s\n", strerror(errno));
+// 		return;
+// 	}
+// 	int reuse = 1;
+// 	if (setsockopt(*listen_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) != 0) {
+// 		printf("setsockopt %s \n",strerror(errno));
+// 		return; 
+// 	}
+// 	struct sockaddr_in my_addr;
+// 	memset(&my_addr, 0, sizeof(my_addr));
+// 	my_addr.sin_family = AF_INET;
+// 	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+// 	my_addr.sin_port = htons(port);
+// 	// binding
+// 	status = bind(*listen_sock, (struct sockaddr*)&my_addr, sizeof(struct sockaddr));
+// 	if (status < 0) {
+// 		printf("Bind error: %s\n", strerror(errno));
+// 		return;
+// 	}
+// 	// start to accept client connections
+// 	if (listen(*listen_sock, MAX_CLIENTS) != 0) {
+// 		printf("Listen error: %s\n", strerror(errno));
+// 		return;
+// 	}
+// 	printf("Accepting connections on port %d \n", port);
+// 	return;
+// }
+int build_fd_sets(fd_set *read_fds, fd_set* write_fds, fd_set *except_fds) {
+	int i;
+	FD_ZERO(read_fds);
+	FD_SET(listen_socket, read_fds);
+	for (i = 0; i < MAX_CLIENTS; i++) {
+		if (connection_users[i].socket != -1) {
+			FD_SET(connection_users[i].socket, write_fds);
+		}
+	}
+	FD_ZERO(except_fds);
+	FD_SET(listen_socket, except_fds);
+	for (i = 0; i < MAX_CLIENTS; i++ ){
+		if (connection_users[i].socket != -1) {
+			FD_SET(connection_users[i].socket, except_fds);
+		}
+	}
+	return 0;
+}
+
+int login(int clientSocket) {
+	User* user = NULL;
+	Message *user_msg = (Message *) malloc(sizeof(Message));
+	Message *pass_msg = (Message*) malloc(sizeof(Message));
+	Message *response;
+	char* nameandfile;
+	receive_command(clientSocket, user_msg);
+	if (user_msg->header.type != QUIT) {
+		receive_command(clientSocket, pass_msg);
+		int i=0;
+		User ** users_array = usersArray;
+		while (users_array[i] != NULL) {
+			if (strcmp(users_array[i]->user_name, user_msg->arg1) == 0) {
+				if (strcmp(users_array[i]->password, pass_msg->arg1) == 0) {
+					user = users_array[i];
+					nameandfile = getNameAndFiles(user);
+					response = createServerMessage(LOGIN_DETAILS,nameandfile);
+					// online user- on
+					user->online = 1;
+					// insert to connection_users
+					int j;
+					for (j = 0; j < MAX_CLIENTS; j++) {
+						if (connection_users[i].socket == -1) {
+							//insert new connection
+							connection_users[i].username = users_array[i]->user_name;
+						}
+					}
+					break;
+				}
+			}
+			i ++;
+		}
+	}
+	if (user == NULL) {
+	 	response = createServerMessage(INVALID_LINE, "Wrong username or/and password. please try again\n");
+	}
+	send_command(clientSocket, response);
+	free(response);
+	if(user != NULL) {
+		free(nameandfile);
+	}
+	free(user_msg);
+	free(pass_msg);
+	return user == NULL ? 0 : -1;
+}
+// this function get a user struct and create a connection between
+// him and the server... 
+int accept_new_connection() {
+	struct sockaddr_in client_addr;
+	memset(&client_addr, 0, sizeof(client_addr));
+	socklen_t client_len = sizeof(client_addr);
+	int new_client_soc;
+	new_client_soc = accept(listen_socket,(struct sockaddr *)&client_addr, &client_len);
+	if (new_client_soc < 0) {
+		perror("accept()");
+		return -1;
+	}
+	int i;
+	char client_ipv4_str[INET_ADDRSTRLEN];
+  	inet_ntop(AF_INET, &client_addr.sin_addr, client_ipv4_str, INET_ADDRSTRLEN);
+	printf("Incoming connection from %s:%d.\n", client_ipv4_str, client_addr.sin_port);
+	for (i=0; i<MAX_CLIENTS; i++) {
+		if (connection_users[i].socket == -1) {
+			connection_users[i].socket = new_client_soc;
+			connection_users[i].client_addr = client_addr;
+			// connection_users[i].username = user->user_name;
+			return new_client_soc;
+		}
+	}
+	printf("There are too much connections. closing this connection. \n");
+	close(new_client_soc);
+	return -1;
+}
+// closing the client connection
+int close_client(connection_t* client){
+	printf("Close client socket\n");
+	close(client->socket);
+	return 0;
+}
+
+
+void start_listen(int numOfUsers, int port) {
 	int status;
-	// create a fd for the listen socket
-	*listen_socket = socket(PF_INET, SOCK_STREAM, 0);
-	if (*listen_socket < 0) {
+	// start listen socket
+	listen_socket = socket(PF_INET, SOCK_STREAM, 0);
+	if (listen_socket == -1) {
 		printf("%s\n", strerror(errno));
 		return;
-	}
-	int reuse = 1;
-	if (setsockopt(*listen_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) != 0) {
-		printf("setsockopt %s \n",strerror(errno));
-		return; 
 	}
 	struct sockaddr_in my_addr;
-	memset(&my_addr, 0, sizeof(my_addr));
-	my_addr.sin_family = AF_INET;
-	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	my_addr.sin_port = htons(port);
-	// binding
-	status = bind(*listen_socket, (struct sockaddr*)&my_addr, sizeof(struct sockaddr));
-	if (status < 0) {
-		printf("Bind error: %s\n", strerror(errno));
-		return;
-	}
-	// start to accept client connections
-	if (listen(*listen_socket, MAX_CLIENTS) != 0) {
-		printf("Listen error: %s\n", strerror(errno));
-		return;
-	}
-	printf("Accepting connections on port %d \n", port);
-	return;
-}
-int build_fd_sets(fd_set *read_fds, fd_set* write_fds, fd_set *except) {
-	
-}
-void start_listen(int numOfUsers, int port) {
-	int status, newsocketfd;
-	int socketfd = socket(PF_INET, SOCK_STREAM, 0);
-	if (socketfd == -1) {
-		printf("%s\n", strerror(errno));
-		return;
-	}
-	struct sockaddr_in my_addr, client_addr;
-	socklen_t client_size = sizeof(client_addr);
-	if (socketfd < 0) {
-		printf("Could not create socket\n");
-		return;
-	}
+	//socklen_t client_size = sizeof(client_addr);
 	bzero((char *) &my_addr, sizeof(my_addr));
 	my_addr.sin_port = htons(port);
 	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	my_addr.sin_family = AF_INET;
-	status = bind(socketfd, (struct sockaddr *) &my_addr, sizeof(my_addr));
+	status = bind(listen_socket, (struct sockaddr *) &my_addr, sizeof(my_addr));
 	if (status < 0) {
 		printf("Bind error: %s\n", strerror(errno));
 		freeUsers(numOfUsers);
 		return;
 	}
-	// MAX users is 1
-	status = listen(socketfd, 1);
+	// MAX_CLIENTS users is 15
+	status = listen(listen_socket, MAX_CLIENTS);
 	if (status < 0) {
-		close(socketfd);
+		close(listen_socket);
 		printf("The listen() failed: %s\n", strerror(errno));
 		freeUsers(numOfUsers);
 		return;
 	}
-	// keep accepting users, one at a time
+	printf("Accepting connections on port %d.\n", (int) port);
+	
+	// init the connection_user array !
+	int i;
+	for (i = 0; i< MAX_CLIENTS ;i++) {
+		connection_users[i].socket = -1;
+		connection_users[i].username = NULL;
+	}
+	// init fds
+	fd_set read_fds;
+	fd_set write_fds;
+	fd_set except_fds;
+
+	int high_socket = listen_socket;
+	printf("Waiting for new connections \n");
 	while (1) {
-		newsocketfd = accept(socketfd, (struct sockaddr *) &client_addr,
-				&client_size);
-		if (newsocketfd < 0) {
-			printf("accept() not successful...");
-			printf("%s\n", strerror(errno));
-			return;
+		build_fd_sets(&read_fds, &write_fds, &except_fds);
+		high_socket = listen_socket;
+		// find the max socket
+		for (i = 0; i<MAX_CLIENTS;i++){
+			if(connection_users[i].socket > high_socket) {
+				high_socket = connection_users[i].socket;
+			}
 		}
-		sendGreetingMessage(newsocketfd);
-		client_serving(newsocketfd, numOfUsers);
+		int activity, client_sock;
+		activity = select(high_socket+1, &read_fds, &write_fds, &except_fds, NULL);
+
+		switch (activity) {
+			case -1:
+				perror("select() failed");
+				//TODO: closing everything
+			case 0:
+				perror("select() return 0");
+				//TODO: closing everything
+			default: 
+				if(FD_ISSET(listen_socket,&read_fds)) {
+					client_sock = accept_new_connection();
+					if (client_sock > -1) {
+						sendGreetingMessage(client_sock);
+						//client_serving(newsocketfd, numOfUsers);
+					}
+				}
+				if (FD_ISSET(listen_socket, &except_fds)){
+					printf("Exception listen socket fd \n");
+					//TODO: closing
+				}
+				Message *user_msg = (Message *)malloc(sizeof(Message));
+				int status;
+				for (i = 0; i < MAX_CLIENTS; i++) {
+					if(connection_users[i].socket != -1 && FD_ISSET(connection_users[i].socket, &read_fds)) {
+						// receive_command(connection_users[i].socket, user_msg);
+						// status = handleMessage(connection_users[i].socket, user_msg,getUser(connection_users[i].username));
+						if (connection_users[i].username != NULL) {
+							receive_command(connection_users[i].socket, user_msg);
+							status = handleMessage(connection_users[i].socket, user_msg,getUser(connection_users[i].username));
+							if (!status) {
+								perror("Error in handle message");
+							}
+						} else {
+							login(connection_users[i].socket);
+						}
+					}
+					
+					if (connection_users[i].socket != -1 && FD_ISSET(connection_users[i].socket, &except_fds)) {
+						printf("Exception from client fd \n");
+						close_client(&connection_users[i]);
+						continue;
+					}
+				}
+				
+				
+
+		}
+		// newsocketfd = accept(socketfd, (struct sockaddr *) &client_addr,
+		// 		&client_size);
+		// if (newsocketfd < 0) {
+		// 	printf("accept() not successful...");
+		// 	printf("%s\n", strerror(errno));
+		// 	return;
+		// }
+		// sendGreetingMessage(newsocketfd);
+		// client_serving(newsocketfd, numOfUsers);
 	}
 }
 

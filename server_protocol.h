@@ -32,6 +32,9 @@ void start_server(char* users_file, const char* dir_path, int port);
 void sendListOfOnlineUsers(int clientSocket, User* user);
 void readMessages(int clientSocket, User* user);
 void messageOtherUser(int clientSocket,Message* msg, User* user);
+User* getUser(char* username);
+int login(int clientSocket);
+int build_fd_sets(fd_set *read_fds, fd_set* write_fds, fd_set *except_fds);
 
 
 #endif /* SERVER_PROTOCOL_H_ */

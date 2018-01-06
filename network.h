@@ -64,6 +64,12 @@ typedef struct Message_t{
 	char arg1[MAX_PACKET_SIZE];
 } Message;
 
+typedef struct {
+	int socket;
+	char* username;
+	struct sockaddr_in client_addr;
+} connection_t;
+
 void printMessageArg(Message* msg);
 
 int receiveAll(int socket, void* buffer, int* len);
