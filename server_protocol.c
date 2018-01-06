@@ -379,17 +379,21 @@ int build_fd_sets(fd_set *read_fds, fd_set* write_fds, fd_set *except_fds) {
 }
 
 int login(int clientSocket) {
+	printf("start to login \n");
 	User* user = NULL;
 	Message *user_msg = (Message *) malloc(sizeof(Message));
 	Message *pass_msg = (Message*) malloc(sizeof(Message));
 	Message *response;
 	char* nameandfile;
 	receive_command(clientSocket, user_msg);
+	printf("receive the username \n");
 	if (user_msg->header.type != QUIT) {
 		receive_command(clientSocket, pass_msg);
+		printf("receive the pass \n");
 		int i=0;
 		User ** users_array = usersArray;
 		while (users_array[i] != NULL) {
+			printf("im in the while");
 			if (strcmp(users_array[i]->user_name, user_msg->arg1) == 0) {
 				if (strcmp(users_array[i]->password, pass_msg->arg1) == 0) {
 					user = users_array[i];
@@ -405,6 +409,7 @@ int login(int clientSocket) {
 							connection_users[i].username = users_array[i]->user_name;
 						}
 					}
+					printf("now we are break!");
 					break;
 				}
 			}
@@ -444,6 +449,7 @@ int accept_new_connection() {
 			connection_users[i].socket = new_client_soc;
 			connection_users[i].client_addr = client_addr;
 			// connection_users[i].username = user->user_name;
+			printf("return new socket \n");
 			return new_client_soc;
 		}
 	}
@@ -526,7 +532,6 @@ void start_listen(int numOfUsers, int port) {
 					client_sock = accept_new_connection();
 					if (client_sock > -1) {
 						sendGreetingMessage(client_sock);
-						//client_serving(newsocketfd, numOfUsers);
 					}
 				}
 				if (FD_ISSET(listen_socket, &except_fds)){
@@ -537,6 +542,7 @@ void start_listen(int numOfUsers, int port) {
 				int status;
 				for (i = 0; i < MAX_CLIENTS; i++) {
 					if(connection_users[i].socket != -1 && FD_ISSET(connection_users[i].socket, &read_fds)) {
+						printf("im good!!!");
 						// receive_command(connection_users[i].socket, user_msg);
 						// status = handleMessage(connection_users[i].socket, user_msg,getUser(connection_users[i].username));
 						if (connection_users[i].username != NULL) {
@@ -581,6 +587,7 @@ void start_server(char* users_file, const char* dir_path, int port) {
 		return;
 	}
 	usersArray = (User**) malloc(15 * sizeof(User));
+	User** users_array = usersArray;
 	memset(usersArray, 0, sizeof(User) * 15);
 	int numOfUsers = 0;
 
@@ -599,7 +606,7 @@ void start_server(char* users_file, const char* dir_path, int port) {
 				newUser->password = pass_buffer;
 				newUser->dir_path = fileDirPath;
 				newUser->online = 0;
-				usersArray[numOfUsers] = newUser;
+				users_array[numOfUsers] = newUser;
 				numOfUsers++;
 				// create Messages_received_offline.txt file in his folder
 				char* pathToFile = (char*) calloc(((strlen)(newUser->dir_path)+strlen("Messages_received_offline.txt")+5),sizeof(char));
