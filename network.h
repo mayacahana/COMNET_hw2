@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <sys/select.h>
+
 
 
 #define MAX_USERNAME_SIZE 25

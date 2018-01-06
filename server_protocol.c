@@ -93,7 +93,15 @@ void readMessages(int clientSocket, User* user) {
 	}
 	Message* msg = createServerMessage(GET_FILE,"Messages_received_offline.txt");
 	sendFileToClient(clientSocket, msg, user);
+	// delete the content from the file
+	char* pathToFile = (char*) calloc(((strlen)(user->dir_path)+strlen("Messages_received_offline.txt")+5),sizeof(char));
+	strcpy(pathToFile, user->dir_path);
+	pathToFile[strlen(user->dir_path)] = '/';
+	strcpy(pathToFile + strlen(user->dir_path) + 1, "Messages_received_offline.txt");
+	fclose(fopen(pathToFile, "w"));
+	free(pathToFile);
 	free(msg);
+	return;
 }
  void messageOtherUser(int clientSocket, Message* msg, User* user) {
 	 if (!user){
@@ -390,6 +398,9 @@ void start_server(char* users_file, const char* dir_path, int port) {
 					printf("coudn't create the - Messages_received_offline.txt \n");
 					return;
 				}
+				fclose(fp);
+				free(pathToFile);
+				
 
 			} else {
 				printf("Error: %s \n", strerror(errno));
