@@ -210,13 +210,13 @@ int readMessagesClient(Message* m, int mySocket) {
 	if (status) {
 		printf("error in receiving message\n");
 	}
-	printMessageArg(m);
+	(m);
 	printf("\n");
 	free(m);
 	return 0;
 }
 
-int addFileCommand(Message* m, char* path_to_file, char* file_name,
+int addFileCommand(Message* m, char* path_toprintMessageArg_file, char* file_name,
 		int mySocket) {
 	createMessageCommand(m, ADD_FILE, file_name);
 	int status = send_command(mySocket, m);
@@ -424,6 +424,29 @@ int client_start(char* hostname, int port) {
 	free(msg);
 	char* inputStr;
 	while (status == 0) {
+		build_fd_sets(&sever, &read_fds, NULL, NULL, NULL);//todo
+		int activity = select(maxfd+1, &read_fds, NULL, NULL, NULL); // todo
+		if (activity = -1)
+		{
+			//todo
+		}
+		else if (activity = 0)
+		{
+			//todo
+		}
+		else // returns # of ready fd's
+		{
+			if (FD_ISSET(STDIN, &read_fds)){//getUserCommand
+				//todo
+			}
+			if (FD_ISSET(&sever, &read_fds)){//server sends to print
+				//todo
+			}
+		}
+
+
+
+
 		inputStr = (char*) malloc(
 				sizeof(char) * (MAX_COMMAND_NAME + 2 + 2 * MAX_ARG_LEN));
 		fgets(inputStr, MAX_COMMAND_NAME + 2 + 2 * MAX_ARG_LEN, stdin);
