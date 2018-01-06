@@ -314,6 +314,41 @@ void sendGreetingMessage(int clientSocket) {
 	free(greeting);
 }
 
+void start_listen_server(int *listen_socket, int port) {
+	int status;
+	// create a fd for the listen socket
+	*listen_socket = socket(PF_INET, SOCK_STREAM, 0);
+	if (*listen_socket < 0) {
+		printf("%s\n", strerror(errno));
+		return;
+	}
+	int reuse = 1;
+	if (setsockopt(*listen_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) != 0) {
+		printf("setsockopt %s \n",strerror(errno));
+		return; 
+	}
+	struct sockaddr_in my_addr;
+	memset(&my_addr, 0, sizeof(my_addr));
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	my_addr.sin_port = htons(port);
+	// binding
+	status = bind(*listen_socket, (struct sockaddr*)&my_addr, sizeof(struct sockaddr));
+	if (status < 0) {
+		printf("Bind error: %s\n", strerror(errno));
+		return;
+	}
+	// start to accept client connections
+	if (listen(*listen_socket, MAX_CLIENTS) != 0) {
+		printf("Listen error: %s\n", strerror(errno));
+		return;
+	}
+	printf("Accepting connections on port %d \n", port);
+	return;
+}
+int build_fd_sets(fd_set *read_fds, fd_set* write_fds, fd_set *except) {
+	
+}
 void start_listen(int numOfUsers, int port) {
 	int status, newsocketfd;
 	int socketfd = socket(PF_INET, SOCK_STREAM, 0);
