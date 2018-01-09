@@ -1,5 +1,7 @@
 #include "client_protocol.h"
 
+
+
 /*
  * @param pointer to string and size_t variable n
  * removes last n bits from the string.
