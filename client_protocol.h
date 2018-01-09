@@ -12,6 +12,8 @@
 
 #include <stdio.h>
 
+
+
 void chopN(char* str, size_t n);
 int defineUser(int serverSocket);
 void createMessageCommand(Message* m,  MessageType type, char* prefix);
@@ -26,6 +28,11 @@ int addFileCommand(Message* m, char* path_to_file,char* file_name, int mySocket)
 int getFileCommand(Message* m, char* file_name, char* path_to_save, int mySocket);
 int listOfOnlineUsersCommand(Message*m , char* commandStr, int mySocketfd);
 int readMessagesClient(Message* m, int mySocket);
+int handleServerMessage(Message* m);
+void build_fd_sets_client (int serverSocket, fd_set *read_fd);
+int sendMsgCommand(Message* m,char* arg2, char* arg3, int mySocketfd);
+
+
 
 
 #endif /* CLIENT_PROTOCOL_H_ */

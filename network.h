@@ -23,7 +23,7 @@
 #include <sys/select.h>
 
 
-
+#define STDIN 0//check this
 #define MAX_USERNAME_SIZE 25
 #define MAX_PASSWORD_SIZE 25
 #define MAX_CLIENTS 15
@@ -51,7 +51,7 @@ typedef enum messageType{
 	FILE_CONTENT,
 	LIST_OF_ONLINE_USERS,
 	READ_MSGS,
-	MSG
+	MSG,
 } MessageType;
 
 typedef struct Header_t{

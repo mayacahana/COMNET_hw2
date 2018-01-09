@@ -24,7 +24,6 @@ int send_command(int sckt, Message* msg_to_send) {
 	network_msg.header.type = htons(msg_to_send->header.type);
 	network_msg.header.arg1len = htons(msg_to_send->header.arg1len);
 	strcpy(network_msg.arg1, msg_to_send->arg1);
-	// printf("in send command: %s\n", network_msg.arg1);
 	int total = 0;
 	int bytesLeft = len;
 	int n;
@@ -81,6 +80,7 @@ int receive_command(int sckt, Message* msg_received) {
 		printf("Bytes recieved: %d \n", len_header);
 		return 1;
 	}
+	//printf("done receive_command\n");
 	return 0;
 
 }

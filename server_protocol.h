@@ -15,6 +15,7 @@ typedef struct user_t {
 	char* password;
 	char* dir_path;
 	int online;
+	int socket;
 } User;
 
 Message* createServerMessage(MessageType type, char* arg1);
@@ -34,7 +35,7 @@ void readMessages(int clientSocket, User* user);
 void messageOtherUser(int clientSocket,Message* msg, User* user);
 User* getUser(char* username);
 int login(int clientSocket);
-int build_fd_sets(fd_set *read_fds, fd_set* write_fds, fd_set *except_fds);
+int build_fd_sets(fd_set *read_fds);
 
 
 #endif /* SERVER_PROTOCOL_H_ */
