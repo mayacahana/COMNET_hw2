@@ -33,6 +33,7 @@
 #define MAX_ARG_LEN 500
 #define MAX_FILE_NAME 50
 #define MAX_COMMAND_NAME 15
+#define MAX_MSG_CONTENT 100
 #define HEADER_SIZE (sizeof(MessageHeader))
 #define MAX_PACKET_SIZE 4096 // ask
 #define MAX_DATA_SIZE (MAX_PACKET_SIZE - HEADER_SIZE)

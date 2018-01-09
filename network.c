@@ -18,6 +18,7 @@ void printMessageArg(Message* msg){
 
 
 int send_command(int sckt, Message* msg_to_send) {
+	printf("Im in send command\n");
 	int len = HEADER_SIZE + msg_to_send->header.arg1len;
 
 	Message network_msg;
