@@ -172,21 +172,28 @@ void messageOtherUser(int clientSocket, Message* msg, User* user) {
 			printf("found the user to send \n");
 			fflush(stdout);
 			if (socket_to_send < 0) { //not online
-				//TODO: write to txt file
-				full_message = (char*) calloc((strlen("Message received from: ") + MAX_MSG_CONTENT+ MAX_USERNAME_SIZE + 10),sizeof(char));
-				//full_message[strlen("Message received from: ")+MAX_USERNAME_SIZE+10] = '\0';
-				strcpy(full_message, "Message received from ");
-				strcpy(full_message+22, sentfrom);
-				strcpy(full_message+22+strlen(sentfrom), ": ");
-				strcpy(full_message+24+strlen(sentfrom), message_content);
-				//printf("strlen content = %d\n", strlen(message_content));
-				printf("strlen = %d\n", strlen(full_message));
-				full_message[strlen(full_message)] = '\n';
+				free(full_message);
+				full_message = (char*) calloc(MAX_FILE_SIZE,sizeof(char));
 				char* pathToFile = (char*) calloc(((strlen)(users[i]->dir_path) + strlen("Messages_received_offline.txt") + 5), sizeof(char));
-				strcpy(pathToFile, users[i]->dir_path);
-				pathToFile[strlen(users[i]->dir_path)] = '/';
-				strcpy(pathToFile + strlen(users[i]->dir_path) + 1,"Messages_received_offline.txt");
-				FILE* msg_offline = fopen(pathToFile, "a");
+								strcpy(pathToFile, users[i]->dir_path);
+								pathToFile[strlen(users[i]->dir_path)] = '/';
+								strcpy(pathToFile + strlen(users[i]->dir_path) + 1,"Messages_received_offline.txt");
+				FILE* msg_offline = fopen(pathToFile, "r+");
+				if (msg_offline){
+					fread(full_message, 1, MAX_FILE_SIZE, msg_offline);
+				}
+				fclose(msg_offline);
+				msg_offline = fopen(pathToFile, "w+");
+				//full_message[strlen("Message received from: ")+MAX_USERNAME_SIZE+10] = '\0';
+				printf("before cat full message is %s\n", full_message);
+				strcat(full_message, "Message received from ");
+				strcat(full_message, sentfrom);
+				strcat(full_message, ": ");
+				strcat(full_message, message_content);
+				//printf("strlen content = %d\n", strlen(message_content));
+				//printf("strlen = %d\n", strlen(full_message));
+				strcat(full_message,"\n");
+				printf("after cat full message is %s\n", full_message);
 				if (msg_offline != NULL) {
 					fwrite(full_message, sizeof(char), MAX_MSG_CONTENT, msg_offline);
 					fclose(msg_offline);
@@ -199,6 +206,7 @@ void messageOtherUser(int clientSocket, Message* msg, User* user) {
 			break;
 		}
 	}
+	free(full_message);
 	free(msg);
 }
 
@@ -559,22 +567,11 @@ void start_listen(int numOfUsers, int port) {
 						login(connection_users[i].socket);
 					}
 				}
-
 			}
-
+			free(user_msg);
 		}
-		// newsocketfd = accept(socketfd, (struct sockaddr *) &client_addr,
-		// 		&client_size);
-		// if (newsocketfd < 0) {
-		// 	printf("accept() not successful...");
-		// 	printf("%s\n", strerror(errno));
-		// 	return;
-		// }
-		// sendGreetingMessage(newsocketfd);
-		// client_serving(newsocketfd, numOfUsers);
 	}
-	
-	printf("server out of while loop\n");
+	freeUsers(numOfUsers);
 }
 
 void start_server(char* users_file, const char* dir_path, int port) {
@@ -617,7 +614,7 @@ void start_server(char* users_file, const char* dir_path, int port) {
 				pathToFile[strlen(newUser->dir_path)] = '/';
 				strcpy(pathToFile + strlen(newUser->dir_path) + 1,
 						"Messages_received_offline.txt");
-				FILE *fp = fopen(pathToFile, "a");
+				FILE *fp = fopen(pathToFile, "w+");
 				if (!fp) {
 					printf(
 							"coudn't create the - Messages_received_offline.txt \n");
@@ -636,5 +633,8 @@ void start_server(char* users_file, const char* dir_path, int port) {
 							* (strlen(dir_path) + sizeof(user_buffer) + 5));
 		}
 		start_listen(numOfUsers, port);
+	}
+	else{
+		freeUsers(numOfUsers);
 	}
 }

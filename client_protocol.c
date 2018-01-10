@@ -222,7 +222,6 @@ int addFileCommand(Message* m, char* path_to_file, char* file_name,
 			return 0;
 		}
 		status = addFileClientSide(buffer, path_to_file); // buffer now has whole content of file
-
 		if (buffer == NULL) {
 			printf("maybe empty file. Not sent\n");
 			free(path_to_file);
@@ -233,6 +232,7 @@ int addFileCommand(Message* m, char* path_to_file, char* file_name,
 		status = send_command(mySocket, fileContent);
 		free(buffer);
 		free(fileContent);
+		printf("status = %d\n", status);
 		if (status != 0) {
 			printf("error, re-send message\n");
 			free(m);
@@ -288,11 +288,9 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 				if (addFileCommand(m, str2, str3, mySocketfd) == 1) {
 					printf("Error in add file command %s\n", strerror(errno));
 					free(c);
-					free(m);
 					return 1;
 				}
 				free(c);
-				free(m);
 				return 0;
 			} else if (strcmp(str1, "get_file") == 0) {
 				if (getFileCommand(m, str2, str3, mySocketfd) == 1) {
