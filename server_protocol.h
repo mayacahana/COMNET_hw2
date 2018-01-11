@@ -36,6 +36,7 @@ void messageOtherUser(int clientSocket,Message* msg, User* user);
 User* getUser(char* username);
 int login(int clientSocket);
 int build_fd_sets(fd_set *read_fds);
+void close_client(int clientSocket);
 
 
 #endif /* SERVER_PROTOCOL_H_ */

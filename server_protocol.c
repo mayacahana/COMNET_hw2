@@ -54,8 +54,7 @@ void addFile(int clientSocket, Message* msg, User* user) {
 		printf("Error in Message or User");
 		return;
 	}
-	char* pathToFile = (char*) calloc(
-			(strlen(user->dir_path) + strlen(msg->arg1) + 5), sizeof(char));
+	char* pathToFile = (char*) calloc((strlen(user->dir_path) + strlen(msg->arg1) + 5), sizeof(char));
 	strcpy(pathToFile, user->dir_path);
 	pathToFile[strlen(user->dir_path)] = '/';
 	strcpy(pathToFile + strlen(user->dir_path) + 1, msg->arg1);
@@ -63,8 +62,7 @@ void addFile(int clientSocket, Message* msg, User* user) {
 	Message* msgToSend;
 	if (file == NULL) {
 		printf("File Not Added\n");
-		msgToSend = createServerMessage(ERROR,
-				"couldn't open file in server side\n");
+		msgToSend = createServerMessage(ERROR,"couldn't open file in server side\n");
 		send_command(clientSocket, msgToSend);
 		free(pathToFile);
 		free(msgToSend);
@@ -184,14 +182,11 @@ void messageOtherUser(int clientSocket, Message* msg, User* user) {
 				}
 				fclose(msg_offline);
 				msg_offline = fopen(pathToFile, "w+");
-				//full_message[strlen("Message received from: ")+MAX_USERNAME_SIZE+10] = '\0';
 				printf("before cat full message is %s\n", full_message);
 				strcat(full_message, "Message received from ");
 				strcat(full_message, sentfrom);
 				strcat(full_message, ": ");
 				strcat(full_message, message_content);
-				//printf("strlen content = %d\n", strlen(message_content));
-				//printf("strlen = %d\n", strlen(full_message));
 				strcat(full_message,"\n");
 				printf("after cat full message is %s\n", full_message);
 				if (msg_offline != NULL) {
@@ -289,13 +284,13 @@ void sendFileToClient(int clientSocket, Message* msg, User* user) {
 		fflush(NULL);
 		return;
 	}
-	fread(fileBuffer, MAX_FILE_SIZE, 1, fp);
-	fflush(NULL);
+	int num_read;
+	num_read = fread(fileBuffer, MAX_FILE_SIZE, 1, fp);
+	if (num_read == 0) {
+
+	}
 	fclose(fp);
-	fflush(NULL);
 	strcpy(msg->arg1, fileBuffer);
-	fflush(NULL);
-	printf("send file: %s\n", fileBuffer);
 	msg->header.arg1len = strlen(fileBuffer);
 	send_command(clientSocket, msg);
 	free(fileBuffer);
@@ -333,6 +328,9 @@ int handleMessage(int clientSocket, Message* msg, User* user) {
 	case MSG:
 		printf("in msg case in handlMessage\n");
 		messageOtherUser(clientSocket, msg, user);
+		return 0;
+	case QUIT:
+		close_client(clientSocket);
 		return 0;
 	default:
 		return 1;
@@ -460,9 +458,19 @@ int accept_new_connection() {
 	return -1;
 }
 // closing the client connection
-int close_client(connection_t* client) {
-	close(client->socket);
-	return 0;
+void close_client(int clientSocket) {
+	if (close(clientSocket) == -1) {
+		printf("%s\n", strerror(errno));
+		return;
+	}
+	for (int i=0 ; i < MAX_CLIENTS; i++) {
+		if (connection_users[i].socket == clientSocket) {
+			printf("Client %s with socket %d unconnected \n", connection_users[i].username, clientSocket);
+			connection_users[i].socket = -1;
+			connection_users[i].username = NULL;
+			return;
+		}
+	}
 }
 
 void start_listen(int numOfUsers, int port) {
@@ -494,7 +502,6 @@ void start_listen(int numOfUsers, int port) {
 		return;
 	}
 	printf("Accepting connections on port %d.\n", (int) port);
-
 	// init the connection_user array !
 	int i;
 	for (i = 0; i < MAX_CLIENTS; i++) {
@@ -520,24 +527,22 @@ void start_listen(int numOfUsers, int port) {
 				}
 			}
 		}
-		/* find the max socket
-		for (i = 0; i < MAX_CLIENTS; i++) {
-			//printf("connection_users[%d].socket = %d\n", i, connection_users[i].socket);
-			if (connection_users[i].socket > high_socket) {
-				high_socket = connection_users[i].socket;
-			}
-		}*/
+		// /* find the max socket
+		// for (i = 0; i < MAX_CLIENTS; i++) {
+		// 	//printf("connection_users[%d].socket = %d\n", i, connection_users[i].socket);
+		// 	if (connection_users[i].socket > high_socket) {
+		// 		high_socket = connection_users[i].socket;
+		// 	}
+		// }*/
 		int activity, client_sock;
 		activity = select(high_socket + 1, &read_fds, NULL, NULL, NULL);
 		switch (activity) {
 		case -1:
 			perror("select() failed");
-			printf("in case 1\n"); //delete this
 			break;
 			//TODO: closing everything
 		case 0:
 			perror("select() return 0");
-			printf("in case 0\n"); //delete this
 			break;
 			//TODO: closing everything
 		default:
@@ -547,8 +552,7 @@ void start_listen(int numOfUsers, int port) {
 				if (client_sock > -1) {
 					sendGreetingMessage(client_sock);
 				}
-			}
-			
+			}	
 			Message* user_msg = (Message *) malloc(sizeof(Message));
 			int status;
 			for (i = 0; i < MAX_CLIENTS; i++) {

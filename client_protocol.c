@@ -238,16 +238,18 @@ int addFileCommand(Message* m, char* path_to_file, char* file_name,
 			free(m);
 			return 0;
 		}
+		status = receive_command(mySocket, m);
+		if (status)
+			printf("Error in receiving message\n");
+		else
+			printf("%s", m->arg1);
 	} else
 		printf("Error, re-send message\n");
 	free(m);
 	return 0;
 }
 
-
-//FIX THIS//
-int getFileCommand(Message* m, char* file_name, char* path_to_save,
-		int mySocket) {
+int getFileCommand(Message* m, char* file_name, char* path_to_save,int mySocket) {
 	createMessageCommand(m, GET_FILE, file_name);
 	int status = send_command(mySocket, m);
 	if (status != 0) {
@@ -255,25 +257,26 @@ int getFileCommand(Message* m, char* file_name, char* path_to_save,
 		free(m);
 		return 0;
 	}
+	status = receive_command(mySocket, m);
+	if (status == 0 && (m->header.type != ERROR)) {
+		char* pathToFile = (char*) calloc((strlen(path_to_save)+strlen(file_name)), sizeof(char));
+		strcpy(pathToFile, path_to_save);
+		strcpy(pathToFile + strlen(path_to_save), file_name);
+		if (getFileClientSide(pathToFile, m->arg1))
+			printf("File could not be opened\n");
+	} else
+		printf("Error in receiving message\n");
 	free(m);
 	return 0;
 }
 
 
-//TODO!!!!!!!!!!!//
-
-/*int handleGetFileRecieve(Message* m) { //fix this
-	int status = receive_command(mySocket, m);
-	char* pathToFile = (char*) calloc(
-			(strlen(path_to_save) + strlen(file_name)), sizeof(char));
-	strcpy(pathToFile, path_to_save);
-	strcpy(pathToFile + strlen(path_to_save), file_name);
-	if (getFileClientSide(pathToFile, m->arg1))
-		printf("File could not be opened\n");
-	//todo
-}*/
 
 int sendClientCommand(char* commandStr, int mySocketfd) {
+	if (strcmp(commandStr, "\n") == 0){
+		printf("Error: Invalid command \n");
+		return 0;
+	}
 	Message* m = (Message*) malloc(sizeof(Message));
 	char* c = malloc(strlen(commandStr) + 5);
 	char delimit[] = " \t\r\n\v\f";
@@ -361,7 +364,7 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 		createQuitCommand(m, mySocketfd);
 		free(m);
 		free(c);
-		return 1; //quiting
+		return -1; //quiting
 	} else {
 		printf("Invalid command \n");
 	}
@@ -471,17 +474,18 @@ int client_start(char* hostname, int port) {
 			{	//messages from server
 				printf("receiving command from server\n");
 				Message* m = (Message*) malloc(sizeof(Message));//free this //todo
+				printf("after malloc\n");
 				status = receive_command(socketfd, m);
+				printf("after receive command, msg header is %d\n", m->header.type);
 				if (status) {
 					printf("Error in receiving message %s\n", strerror(errno));
-				} else
+				} else {
 					status = handleServerMessage(m);	//check status
+				}
 			}
 			
 			if (FD_ISSET(STDIN, &read_fds)) {	//commands from user
-				inputStr = (char*) malloc(
-						sizeof(char)
-								* (MAX_COMMAND_NAME + 2 + 2 * MAX_ARG_LEN));
+				inputStr = (char*) malloc(sizeof(char)* (MAX_COMMAND_NAME + 2 + 2 * MAX_ARG_LEN));
 				fgets(inputStr, MAX_COMMAND_NAME + 2 + 2 * MAX_ARG_LEN, stdin);
 				status = sendClientCommand(inputStr, socketfd);
 				if (status == 1)
@@ -512,7 +516,6 @@ void build_fd_sets_client (int socketfd, fd_set *read_fds)
 int handleServerMessage(Message* m) {
 	switch (m->header.type) {//check this
 	case GET_FILE:
-		//handleGetFile();
 		printMessageArg(m);
 		return 0;
 	case LIST_OF_FILES:
@@ -540,6 +543,7 @@ int handleServerMessage(Message* m) {
 		printMessageArg(m);
 		return 0;
 	default:
+		printf("Error in case handle message\n");
 		return 1;
 	}
 	return 0;

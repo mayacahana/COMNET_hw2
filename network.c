@@ -45,7 +45,7 @@ int send_command(int sckt, Message* msg_to_send) {
 int receiveAll(int socket, void* buffer, int* len) {
 	int total = 0;
 	int bytesLeft = *len;
-	int n;
+	int n=0;
 	while (total < *len) {
 		n = recv(socket, (void*) ((long)buffer + total), (size_t) bytesLeft, 0);
 		if (n < 0) {
@@ -75,6 +75,9 @@ int receive_command(int sckt, Message* msg_received) {
 	}
 	//receive arg1
 	int len_arg1 = msg_received->header.arg1len;
+	if (len_arg1 == 0) {
+
+	}
 	memset(msg_received->arg1,0, MAX_DATA_SIZE);
 	if (receiveAll(sckt, msg_received->arg1, &len_arg1)) {
 		printf("%s\n", strerror(errno));
