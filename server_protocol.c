@@ -270,8 +270,6 @@ void sendFileToClient(int clientSocket, Message* msg, User* user) {
 		strcpy(msg->arg1, fileBuffer);
 		msg->header.arg1len = strlen(fileBuffer);
 	}
-	printf("num_read = %d\n", num_read);
-	printf("filebuffer = %s\n", fileBuffer);
 	send_command(clientSocket, msg);
 	free(fileBuffer);
 }
