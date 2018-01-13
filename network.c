@@ -8,17 +8,12 @@
 
 
 void printMessageArg(Message* msg){
-//	while(msg->arg1[i] != '\n'){
-//		printf("%c", msg->arg1[i++]);
-//	}
 	printf("%s",msg->arg1);
-	//printf("\n");
 	fflush(NULL);
 }
 
 
 int send_command(int sckt, Message* msg_to_send) {
-	printf("Im in send command\n");
 	int len = HEADER_SIZE + msg_to_send->header.arg1len;
 
 	Message network_msg;
@@ -60,7 +55,6 @@ int receiveAll(int socket, void* buffer, int* len) {
 }
 
 int receive_command(int sckt, Message* msg_received) {
-	//recieve the Messageeader first
 	int len_header = sizeof(MessageHeader);
 	if (receiveAll(sckt, &msg_received->header, &len_header)) {
 		printf("%s\n", strerror(errno));
@@ -73,7 +67,6 @@ int receive_command(int sckt, Message* msg_received) {
 		printf("Recieve command failed- msg too big");
 		return 1;
 	}
-	//receive arg1
 	int len_arg1 = msg_received->header.arg1len;
 	if (len_arg1 == 0) {
 
@@ -84,7 +77,6 @@ int receive_command(int sckt, Message* msg_received) {
 		printf("Bytes recieved: %d \n", len_header);
 		return 1;
 	}
-	//printf("done receive_command\n");
 	return 0;
 
 }
