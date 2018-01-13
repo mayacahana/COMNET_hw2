@@ -32,16 +32,13 @@ void freeUsers(int numOfUsers) {
 }
 
 User* getUser(char* username) {
-	printf("in getUser\n\nusername = %s\n", username);
 	if (username == NULL){
-		printf("username is NULL\n");
 		return NULL;
 	}
 	int i = 0;
 	User** selectedUser = usersArray;
 	while (selectedUser[i] != NULL) {
 		if (strcmp(selectedUser[i]->user_name, username) == 0){
-			printf("selectedUser[%d]->user_name = %s\n", i, selectedUser[i]->user_name);
 			return selectedUser[i];
 		}
 		i++;
@@ -51,7 +48,6 @@ User* getUser(char* username) {
 
 void addFile(int clientSocket, Message* msg, User* user) {
 	if (!user || !msg) {
-		printf("Error in Message or User");
 		return;
 	}
 	char* pathToFile = (char*) calloc((strlen(user->dir_path) + strlen(msg->arg1) + 5), sizeof(char));
@@ -86,7 +82,6 @@ void addFile(int clientSocket, Message* msg, User* user) {
 
 void deleteFile(int clientSocket, Message* msg, User* user) {
 	if (!user || !msg) {
-		printf("Error in Message or User");
 		return;
 	}
 	char pathToFile[sizeof(user->dir_path) + sizeof(msg->arg1) + 5];
@@ -106,10 +101,8 @@ void deleteFile(int clientSocket, Message* msg, User* user) {
 	free(msgToSend);
 }
 
-void readMessages(int clientSocket, User* user) {
-	
+void readMessages(int clientSocket, User* user) {	
 	if (!user) {
-		printf("Error in read messages");
 		return;
 	}
 	Message* msg = createServerMessage(GET_FILE,"Messages_received_offline.txt");
@@ -128,12 +121,10 @@ void readMessages(int clientSocket, User* user) {
 
 void messageOtherUser(int clientSocket, Message* msg, User* user) {
 	if (!user) {
-		printf("Error in read messages");
 		return;
 	}
 	char buffer[500];//fix macro size
 	strcpy(buffer, msg->arg1);
-	printf("arg1 in msg ither user: %s\n" ,msg->arg1);
 	fflush(stdout);
 	const char* delimit = "\n";
 	char *username = strtok(buffer, delimit);
@@ -152,9 +143,7 @@ void messageOtherUser(int clientSocket, Message* msg, User* user) {
 	printf("numofusers: %d\n", numOfUsers);
 	username[strlen(username)-1] = '\0'; 
 	for(int i =0; i < numOfUsers; i++) {
-		printf("in for befor strcmp\n");
 		if(strcmp(users[i]->user_name, username) == 0) {
-			printf("username(to send to)%s \n", username);
 			fflush(stdout);
 			msg = createServerMessage(MSG, full_message);	
 			int socket_to_send = -1;
@@ -162,12 +151,11 @@ void messageOtherUser(int clientSocket, Message* msg, User* user) {
 				if(connection_users[j].username != NULL){
 					if(strcmp(connection_users[j].username, username) == 0){
 						socket_to_send = connection_users[j].socket;
-						printf("socket number = %d\n", socket_to_send);
+						//printf("socket number = %d\n", socket_to_send);
 						fflush(stdout);
 					}
 				}
 			}
-			printf("found the user to send \n");
 			fflush(stdout);
 			if (socket_to_send < 0) { //not online
 				free(full_message);
@@ -182,13 +170,11 @@ void messageOtherUser(int clientSocket, Message* msg, User* user) {
 				}
 				fclose(msg_offline);
 				msg_offline = fopen(pathToFile, "w+");
-				printf("before cat full message is %s\n", full_message);
 				strcat(full_message, "Message received from ");
 				strcat(full_message, sentfrom);
 				strcat(full_message, ": ");
 				strcat(full_message, message_content);
 				strcat(full_message,"\n");
-				printf("after cat full message is %s\n", full_message);
 				if (msg_offline != NULL) {
 					fwrite(full_message, sizeof(char), MAX_MSG_CONTENT, msg_offline);
 					fclose(msg_offline);
@@ -210,7 +196,6 @@ void messageOtherUser(int clientSocket, Message* msg, User* user) {
 
 
 void sendListOfFiles(int clientSocket, User* user) {
-	printf("in sendListOfFiles\n");
 	if (!user) {
 		return;
 	}
@@ -236,7 +221,7 @@ void sendListOfFiles(int clientSocket, User* user) {
 	if (numOfFiles <= 2)
 		strcpy(files_names, "No Files in your directory\n");
 	Message* msg = createServerMessage(LIST_OF_FILES, files_names);
-	printf("file_names = %s", files_names);
+	//printf("file_names = %s", files_names);
 	send_command(clientSocket, msg);
 	free(msg);
 	return;
@@ -280,8 +265,6 @@ void sendFileToClient(int clientSocket, Message* msg, User* user) {
 		//read the file into a buffer
 	char* fileBuffer = (char*) malloc(sizeof(char) * MAX_FILE_SIZE + 1);
 	if (!fileBuffer) {
-		printf("no buffer\n");
-		fflush(NULL);
 		return;
 	}
 	int num_read;
@@ -302,31 +285,24 @@ int handleMessage(int clientSocket, Message* msg, User* user) {
 	}
 	switch (msg->header.type) {
 	case LIST_OF_FILES:
-		printf("in list_of_files case in handlMessage\n\n");
 		sendListOfFiles(clientSocket, user);
 		return 0;
 	case DELETE_FILE:
-		printf("in delete file case in handlMessage\n");
 		deleteFile(clientSocket, msg, user);
 		return 0;
 	case ADD_FILE:
-		printf("in add file case in handlMessage\n");
 		addFile(clientSocket, msg, user);
 		return 0;
 	case GET_FILE:
-		printf("in get file case in handlMessage\n");		
 		sendFileToClient(clientSocket, msg, user);
 		return 0;
 	case LIST_OF_ONLINE_USERS:
-		printf("in list of online users case in handlMessage\n");
 		sendListOfOnlineUsers(clientSocket, user);
 		return 0;
 	case READ_MSGS:
-		printf("in read msgs case in handlMessage\n");
 		readMessages(clientSocket, user);
 		return 0;
 	case MSG:
-		printf("in msg case in handlMessage\n");
 		messageOtherUser(clientSocket, msg, user);
 		return 0;
 	case QUIT:
@@ -527,13 +503,6 @@ void start_listen(int numOfUsers, int port) {
 				}
 			}
 		}
-		// /* find the max socket
-		// for (i = 0; i < MAX_CLIENTS; i++) {
-		// 	//printf("connection_users[%d].socket = %d\n", i, connection_users[i].socket);
-		// 	if (connection_users[i].socket > high_socket) {
-		// 		high_socket = connection_users[i].socket;
-		// 	}
-		// }*/
 		int activity, client_sock;
 		activity = select(high_socket + 1, &read_fds, NULL, NULL, NULL);
 		switch (activity) {
