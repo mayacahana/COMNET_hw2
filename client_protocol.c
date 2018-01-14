@@ -48,20 +48,19 @@ int defineUser(int scket) {
 		status = 0;
 	}
 
-	int userMaxLen = MAX_USERNAME_SIZE + strlen("User: ");
+	int userMaxLen = MAX_USERNAME_SIZE + 6;
 	int passMaxLen = MAX_PASSWORD_SIZE + strlen("Password: ");
 	int loginMaxLen = MAX_USERNAME_SIZE + strlen("User: ") + MAX_PASSWORD_SIZE
 			+ strlen("Password: ");
 
-	char* fullUsername = (char*) malloc(sizeof(char) * (userMaxLen));
-	char* loginDetails = (char*) malloc(sizeof(char) * (loginMaxLen));
-	char* fullPassword = (char*) malloc(sizeof(char) * (passMaxLen));
+	char* fullUsername = (char*) calloc((userMaxLen+5), sizeof(char));
+	char* loginDetails = (char*) malloc(sizeof(char) * (loginMaxLen+5));
+	char* fullPassword = (char*) malloc(sizeof(char) * (passMaxLen+5));
 	loginDetails[loginMaxLen] = '\0';
 	char passwordPrefix[11];
 	char userPrefix[7];
 	userPrefix[6] = '\0';
 	passwordPrefix[10] = '\0';
-	fullUsername[strlen(fullUsername) - 1] = '\0';
 	while (status && user_msg->header.type != QUIT) {
 		fgets(fullUsername, userMaxLen, stdin);
 		fgets(fullPassword, passMaxLen, stdin);
@@ -75,8 +74,6 @@ int defineUser(int scket) {
 			int userFlag = strcmp(userPrefix, "User: ");
 			if (passFlag||userFlag) {
 				printf("Wrong prefix of 'User:' or 'Password:' \n");
-				free(fullPassword);
-				free(fullUsername);
 			} else {
 				//handle login
 				strcpy(loginDetails, fullUsername);
@@ -149,7 +146,7 @@ int createQuitCommand(Message* m, int mySocketfd) {
 		printf("Error. re-send message %s\n", strerror(errno));
 		return 1;
 	}
-	return 1;
+	return 0;
 }
 /*
  * @param Message* m, char* commandStr, int mySocketfd
@@ -206,7 +203,7 @@ int readMessagesClient(Message* m, int mySocket) {
 		free(m);
 		return 1;
 	}
-	printf("\n");
+	//printf("\n");
 	free(m);
 	return 0;
 }
@@ -257,14 +254,16 @@ int getFileCommand(Message* m, char* file_name, char* path_to_save,int mySocket)
 	}
 	status = receive_command(mySocket, m);
 	if (status == 0 && (m->header.type != ERROR)) {
-		char* pathToFile = (char*) calloc((strlen(path_to_save)+strlen(file_name)), sizeof(char));
+		char* pathToFile = (char*) calloc((strlen(path_to_save)+strlen(file_name)+2), sizeof(char));
 		strcpy(pathToFile, path_to_save);
 		strcpy(pathToFile + strlen(path_to_save), file_name);
-		if (getFileClientSide(pathToFile, m->arg1))
+		if (getFileClientSide(pathToFile, m->arg1)){
 			printf("File could not be opened\n");
-	} else
+		}
+		free(pathToFile);
+	} else{
 		printf("Error in receiving message\n");
-	free(m);
+	}
 	return 0;
 }
 
@@ -295,10 +294,11 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 				return 0;
 			} else if (strcmp(str1, "get_file") == 0) {
 				if (getFileCommand(m, str2, str3, mySocketfd) == 1) {
-					//printf("Error in get file command %s\n", strerror(errno));
+					free(m);
 					free(c);
 					return 1;
 				}
+				free(m);
 				free(c);
 				return 0;
 			}else if (strcmp(str1, "msg") == 0 ){
@@ -309,6 +309,8 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 					free(m);
 					return 1;	
 				}
+				free(c);
+				free(m);
 				return 0;
 			}
 			else {
@@ -340,7 +342,7 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 	if (strcmp(str1, "users_online") == 0) {
 		if (listOfOnlineUsersCommand(m, commandStr, mySocketfd) == 1) {
 			//printf("Error in get online users list command %s \n",
-					strerror(errno));
+				//	strerror(errno));
 			free(c);
 			return 1;
 		}
@@ -350,7 +352,7 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 	if (strcmp(str1, "read_msgs") == 0) {
 		if (readMessagesClient(m, mySocketfd) == 1) {
 			//printf("Error in get online users list command %s \n",
-					strerror(errno));
+				//	strerror(errno));
 			free(c);
 			return 1;
 		}
@@ -371,7 +373,7 @@ int sendClientCommand(char* commandStr, int mySocketfd) {
 
 int sendMsgCommand(Message* m,char* arg2, char* arg3, int mySocketfd)
 {
-	char* buffer = (char*) malloc(sizeof(char) * (120));//macros for length
+	char* buffer = (char*) malloc(sizeof(char) * (121));//macros for length
 	if (buffer == 0){
 		printf("Error. re-send message %s\n", strerror(errno));
 		return -1;
@@ -456,9 +458,9 @@ int client_start(char* hostname, int port) {
 		build_fd_sets_client(socketfd, &read_fds);
 		int activity = select(socketfd + 1, &read_fds, NULL, NULL, NULL);
 		if (activity == -1) {
-			printf("Problem with select()")
+			printf("Problem with select()");
 		} else if (activity == 0) {
-			printf("Problem with select()")
+			printf("Problem with select()");
 		}
 		else // returns # of ready fd's
 		{
@@ -471,14 +473,14 @@ int client_start(char* hostname, int port) {
 				} else {
 					status = handleServerMessage(m);	//check status
 				}
+				if (m != NULL){
+					free(m);
+				}
 			}
-			
 			if (FD_ISSET(STDIN, &read_fds)) {	//commands from user
 				inputStr = (char*) malloc(sizeof(char)* (MAX_COMMAND_NAME + 2 + 2 * MAX_ARG_LEN));
 				fgets(inputStr, MAX_COMMAND_NAME + 2 + 2 * MAX_ARG_LEN, stdin);
 				status = sendClientCommand(inputStr, socketfd);
-				// if (status == 1)
-				// 	printf("Error in sendClientCommand\n");
 				free(inputStr);
 			}
 		}
